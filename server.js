@@ -25,7 +25,7 @@ app.use(cookieParser());
 // Routes
 app.use("/api/user", userRouter);
 app.use("/api/products", productRouter);
-app.use("/api/blogs", productRouter);
+app.use("/api/blogs", blogRouter);
 
 // Error handling middleware
 app.use(notFound);
