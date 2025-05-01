@@ -13,8 +13,8 @@ import {
 const blogRouter = express.Router();
 
 blogRouter.post("/create-blog", authMiddleware, isAdmin, createBlog);
-blogRouter.get("/:id", authMiddleware, getSingleBlog);
-blogRouter.get("/", authMiddleware, getAllBlogs);
+blogRouter.get("/:id", getSingleBlog);
+blogRouter.get("/", getAllBlogs);
 blogRouter.put("/update/:id", authMiddleware, isAdmin, updateBlog);
 blogRouter.put("/like/:id", authMiddleware, likeBlog);
 blogRouter.put("/dislike/:id", authMiddleware, disLikeBlog);

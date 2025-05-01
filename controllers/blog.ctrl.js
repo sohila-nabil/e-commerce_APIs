@@ -1,5 +1,6 @@
 import Blog from "../models/blog.model.js";
 import asyncHandler from "express-async-handler";
+import validateMongoId from "../utils/validateMongoId.js";
 
 const createBlog = asyncHandler(async (req, res) => {
   const blog = await Blog.create(req.body);
@@ -9,15 +10,18 @@ const createBlog = asyncHandler(async (req, res) => {
 });
 
 const getSingleBlog = asyncHandler(async (req, res) => {
-  const blog = await Blog.findById(req.params.id);
+  validateMongoId(req.params.id);
+  const blog = await Blog.findById(req.params.id).populate('likes disLikes');
   if (!blog) {
     res.status(404).json({ success: false, message: "Blog Not Found" });
-  } else {
-    res.status(200).json(blog);
   }
+  blog.numViews += 1;
+  await blog.save();
+  res.status(200).json(blog);
 });
 
 const updateBlog = asyncHandler(async (req, res) => {
+  validateMongoId(req.params.id);
   const blog = await Blog.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,
@@ -30,6 +34,7 @@ const updateBlog = asyncHandler(async (req, res) => {
 });
 
 const deleteBlog = asyncHandler(async (req, res) => {
+  validateMongoId(req.params.id);
   const blog = await Blog.findByIdAndDelete(req.params.id);
   if (!blog) {
     res.status(404).json({ success: false, message: "Blog Not Found" });
@@ -47,6 +52,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
 });
 
 const likeBlog = asyncHandler(async (req, res) => {
+  validateMongoId(req.params.id);
   const blog = await Blog.findById(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: "Blog Not Found" });
@@ -76,6 +82,7 @@ const likeBlog = asyncHandler(async (req, res) => {
 });
 
 const disLikeBlog = asyncHandler(async (req, res) => {
+  validateMongoId(req.params.id);
   const blog = await Blog.findById(req.params.id);
   if (!blog) {
     return res.status(404).json({ success: false, message: "Blog Not Found" });
