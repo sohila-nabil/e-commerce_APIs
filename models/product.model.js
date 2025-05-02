@@ -22,8 +22,8 @@ var productSchema = new mongoose.Schema(
       required: true,
     },
     category: {
-      //   type: mongoose.Schema.Types.ObjectId,
-      //   ref: "Category",
+      // type: mongoose.Schema.Types.ObjectId,
+      // ref: "Category",
       type: String,
       required: true,
     },
@@ -73,6 +73,10 @@ var productSchema = new mongoose.Schema(
         },
       },
     ],
+    totalRating: {
+      type: Number,
+      default: 0,
+    },
     brand: {
       type: String,
       required: true,
