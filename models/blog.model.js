@@ -24,11 +24,16 @@ var blogSchema = new mongoose.Schema(
     },
     likes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     disLikes: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
-    image: {
-      type: String,
-      default:
-        "https://thumbs.dreamstime.com/b/blogging-blog-concepts-ideas-worktable-blogging-blog-concepts-ideas-white-worktable-110423482.jpg?w=768",
-    },
+    images: [
+      {
+        public_id: {
+          type: String,
+        },
+        url: {
+          type: String,
+        },
+      },
+    ],
     author: {
       type: String,
       default: "Admin",

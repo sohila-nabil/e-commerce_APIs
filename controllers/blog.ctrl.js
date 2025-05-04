@@ -1,6 +1,12 @@
 import Blog from "../models/blog.model.js";
 import asyncHandler from "express-async-handler";
 import validateMongoId from "../utils/validateMongoId.js";
+import fs from "fs";
+import {
+  deleteFromCloudinary,
+  uploadToCloudinary,
+} from "../utils/cloudinary.js";
+import sharp from "sharp";
 
 const createBlog = asyncHandler(async (req, res) => {
   const blog = await Blog.create(req.body);
@@ -11,7 +17,7 @@ const createBlog = asyncHandler(async (req, res) => {
 
 const getSingleBlog = asyncHandler(async (req, res) => {
   validateMongoId(req.params.id);
-  const blog = await Blog.findById(req.params.id).populate('likes disLikes');
+  const blog = await Blog.findById(req.params.id).populate("likes disLikes");
   if (!blog) {
     res.status(404).json({ success: false, message: "Blog Not Found" });
   }
@@ -114,6 +120,83 @@ const disLikeBlog = asyncHandler(async (req, res) => {
     .json({ success: true, message: "Blog dislike updated", blog });
 });
 
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  let files = req.files || [];
+  const blog = await Blog.findById(id);
+  if (!blog) {
+    res.status(404).json({
+      success: false,
+      message: "blog not found",
+    });
+  }
+  const uploadedImages = await Promise.all(
+    files.map(async (file) => {
+      console.log(file);
+
+      const resizedBuffer = await sharp(file.buffer)
+        .resize(500, 500)
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      return await uploadToCloudinary(resizedBuffer, "blogs");
+    })
+  );
+  console.log(uploadedImages);
+  blog.images = uploadedImages;
+  await blog.save();
+  res.status(200).json({
+    success: true,
+    message: "Images uploaded successfully",
+    blog,
+  });
+});
+
+const deleteImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const blog = await Blog.findById(id);
+  if (!blog) {
+    res.status(404).json({
+      success: false,
+      message: "blog not found",
+    });
+  }
+  if (blog.images.length > 0) {
+    const images = blog.images?.map(async (image) => {
+      await deleteFromCloudinary(image?.public_id);
+    });
+    await Promise.all(images);
+    blog.images = [];
+    await blog.save();
+    res.status(200).json({
+      success: true,
+      message: "Images deleted successfully",
+      blog,
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+      message: "no images to delete",
+    });
+  }
+});
+
+const deleteOneImage = asyncHandler(async (req, res) => {
+  const { public_id } = req.body;
+  const { id } = req.params;
+  validateMongoId(id);
+  const blog = await Blog.findById(id);
+  if (!blog) {
+    return res.status(400).json({ success: false, message: "blog not exist" });
+  }
+  await deleteFromCloudinary(public_id);
+  blog.images = blog.images.filter((img) => img.public_id !== public_id);
+  await blog.save();
+  res
+    .status(200)
+    .json({ success: true, message: "Image deleted successfully" });
+});
+
 export {
   createBlog,
   getSingleBlog,
@@ -122,4 +205,7 @@ export {
   getAllBlogs,
   likeBlog,
   disLikeBlog,
+  uploadImages,
+  deleteImages,
+  deleteOneImage
 };

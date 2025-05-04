@@ -3,6 +3,12 @@ import asyncHandler from "express-async-handler";
 import slugify from "slugify";
 import User from "./../models/user.model.js";
 import validateMongoId from "./../utils/validateMongoId.js";
+import fs from "fs";
+import sharp from "sharp";
+import {
+  uploadToCloudinary,
+  deleteFromCloudinary,
+} from "./../utils/cloudinary.js";
 
 const createProduct = asyncHandler(async (req, res) => {
   if (req.body.title) req.body.slug = slugify(req.body.title);
@@ -17,7 +23,7 @@ const createProduct = asyncHandler(async (req, res) => {
 
 const getOneProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const product = await Product.findById(id);
+  const product = await Product.findById(id).populate("color category");
   if (!product) {
     res.status(404).json({
       success: false,
@@ -41,7 +47,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
   //   filtering
   let queryStr = JSON.stringify(queryObj);
   queryStr = queryStr.replace(/\b(gte|gt|lte|lt)\b/g, (match) => `$${match}`);
-  let query = Product.find(JSON.parse(queryStr));
+  let query = Product.find(JSON.parse(queryStr)).populate("color category");
 
   //   sorting
   if (req.query.sort) {
@@ -121,21 +127,11 @@ const addToWishlist = asyncHandler(async (req, res) => {
   });
 });
 
-// find prod
-// find user
-// check if already rated
-// if already rated, update the rating
-// if not, create a new rating
-// calculate total rating
-// update the product with the new rating
-// update the user with the new rating
-// update the product with the new rating
-
 const rateProduct = asyncHandler(async (req, res) => {
   const { prodId, star, comment } = req.body;
   validateMongoId(prodId);
 
-  let product = await Product.findById(prodId);
+  let product = await Product.findById(prodId).populate("color category");
   if (!product) {
     return res
       .status(404)
@@ -189,54 +185,91 @@ const rateProduct = asyncHandler(async (req, res) => {
   });
 });
 
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const files = req.files || [];
+  if (!files.length)
+    return res.status(400).json({ message: "No files provided" });
 
-// const rateProduct = asyncHandler(async (req, res) => {
-//   const { star, comment, productId } = req.body;
-//   validateMongoId(productId);
-//   const product = await Product.findById(productId)
-//   if (!product) {
-//     res.status(404).json({
-//       success: false,
-//       message: "Product not found",
-//     });
-//     throw new Error("Product not found");
-//   }
-//   const alreadyRated = product.ratings.find((user)=> {
-//     user.postedBy.toString() === req.user._id.toString()
-//   })
-//   if (alreadyRated) {
-//     product.ratings = product.ratings.map((user) => {
-//       if (user.postedBy.toString() === req.user._id.toString()) {
-//         user.star = star;
-//         user.comment = comment;
-//       }
-//       return user;
-//     });
-//   } else {
-//     product.ratings.push({
-//       star,
-//       comment,
-//       postedBy: req.user._id,
-//     });
-//   }
+  const product = await Product.findById(id);
+  if (!product) {
+    res.status(404).json({
+      success: false,
+      message: "Product not found",
+    });
+  }
 
-//   await product.save();
-//   let totalRating = product.ratings.length;
-//   let totalStars = product.ratings.reduce((acc, item) => acc + item.star, 0);
-//   let actualRating = totalStars / totalRating;
-//   await Product.findByIdAndUpdate(
-//     productId,
-//     {
-//       totalRating: Math.round(actualRating),
-//     },
-//     { new: true }
-//   );
-//   res.status(200).json({
-//     success: true,
-//     message: "Product rated successfully",
-//     product,
-//   });
-// }
-// );
+  const uploadedImages = await Promise.all(
+    files.map(async (file) => {
+      console.log(file);
 
-export { createProduct, getAllProducts, getOneProduct, addToWishlist, rateProduct };
+      const resizedBuffer = await sharp(file.buffer)
+        .resize(500, 500)
+        .jpeg({ quality: 90 })
+        .toBuffer();
+
+      return await uploadToCloudinary(resizedBuffer, "products");
+    })
+  );
+  console.log(uploadedImages);
+
+  product.images = uploadedImages;
+  await product.save();
+  res.status(200).json({
+    success: true,
+    message: "Images uploaded successfully",
+    product,
+  });
+});
+
+const deleteProductsImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const product = await Product.findById(id);
+  // if (!product) {
+  //   res.status(404).json({
+  //     success: false,
+  //     message: "Product not found",
+  //   });
+  // }
+  // const images = product.images.map(async (image) => {
+  //   await deleteImageFromCloudinary(image?.public_id);
+  // });
+
+  // await Promise.all(images);
+  // product.images = [];
+  // await product.save();
+  // res.status(200).json({
+  //   success: true,
+  //   message: "Images deleted successfully",
+  //   product,
+  // });
+});
+
+const deleteOneImage = asyncHandler(async (req, res) => {
+  const { public_id } = req.body;
+  const { id } = req.params;
+  validateMongoId(id);
+  const product = await Product.findById(id);
+  if (!product) {
+    return res
+      .status(400)
+      .json({ success: false, message: "product not exist" });
+  }
+  await deleteFromCloudinary(public_id);
+  product.images = product.images.filter((img) => img.public_id !== public_id);
+  await product.save();
+  res
+    .status(200)
+    .json({ success: true, message: "Image deleted successfully" });
+});
+
+export {
+  createProduct,
+  getAllProducts,
+  getOneProduct,
+  addToWishlist,
+  rateProduct,
+  uploadImages,
+  deleteProductsImages,
+  deleteOneImage
+};

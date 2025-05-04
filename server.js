@@ -12,6 +12,7 @@ import categoryRouter from "./routes/productCategoryRoutes.js";
 import blogCategoryRouter from "./routes/blogCatRoutes.js";
 import brandRouter from "./routes/brandRoutes.js";
 import couponRouter from "./routes/couponoutes.js";
+import colorRouter from "./routes/colorRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -20,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 dbConnected();
 
 // Cloudinary configuration
-cloudinaryConfig(); 
+cloudinaryConfig();
 
 // Middleware
 app.use(morgan("dev")); // Logging middleware
@@ -36,6 +37,7 @@ app.use("/api/categories", categoryRouter);
 app.use("/api/blogcategories", blogCategoryRouter);
 app.use("/api/brands", brandRouter);
 app.use("/api/coupon", couponRouter);
+app.use("/api/colors", colorRouter);
 
 // Error handling middleware
 app.use(notFound);

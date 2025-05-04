@@ -22,9 +22,8 @@ var productSchema = new mongoose.Schema(
       required: true,
     },
     category: {
-      // type: mongoose.Schema.Types.ObjectId,
-      // ref: "Category",
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
       required: true,
     },
     images: [
@@ -51,10 +50,13 @@ var productSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    color: {
-      type: String,
-      required: true,
-    },
+    color: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Color",
+      },
+    ],
+    tags: [],
     size: {
       type: String,
     },
